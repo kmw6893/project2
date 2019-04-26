@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.file.*;
+import java.sql.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +22,12 @@ import java.util.stream.Collectors;
  * categories and products from information on the underlying file system.
  */
 public class Controller {
-  private Path dirPath;
+  private String url;
+  private String db;
+  private String host;
+  private String portNum;
+  private String username;
+  private String password;
   private Set<Category> categories = new HashSet<>();
 
   public  enum PRODUCT_FIELD {
@@ -29,37 +35,39 @@ public class Controller {
     DESCRIPTION,
     COST,
     INVENTORY
-  };
+  }
 
-  public Controller(String directory) {
-    loadCategories(directory);
+  public Controller(String db, String host, String portNum, String username, String password) {
+    this.db = db;
+    this.host = host;
+    this.portNum = portNum;
+    this.username = username;
+    this.password = password;
+    this.url = "jdbc:mysql://" + host + ":" + portNum + "/" + db;
+    loadCategories();
   }
 
   /**
    * Load the Category information
    *
-   * @param directory root directory
+   *
    */
-  private void loadCategories(String directory) {
-    this.dirPath = Paths.get(directory);
+  private void loadCategories() {
+    Statement stmt;
+    ResultSet rs;
+    String myTable = "SELECT * FROM category";
 
-    DirectoryStream.Filter<Path> dirFilter = new DirectoryStream.Filter<Path>() {
-      @Override
-      public boolean accept(Path path) throws IOException {
-        return Files.isDirectory(path);
-      }
-    };
+    try (Connection con = DriverManager.getConnection(url, username, password)) {
 
-    // We're just interested in directories, filter out all other files
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirPath, dirFilter)) {
-      for (Path file : stream) {
-        // get the category information from each directory
-        Optional<Category> entry = getCategory(file);
+      stmt = con.createStatement();
+      rs = stmt.executeQuery(myTable);
+      while(rs.next()){
+        Optional<Category> entry = getCategory(rs.getInt("id"));
         entry.ifPresent(categories::add);
       }
-    } catch (IOException | DirectoryIteratorException e) {
-      // TODO:  Replace with logger
-      System.err.println(e);
+
+    } catch (SQLException e) {
+      throw new IllegalStateException("Cannot connect the database!", e);
     }
   }
 
@@ -123,7 +131,7 @@ public class Controller {
   /**
    * Get the category that matches the provided category name
    *
-   * @param name
+   * @param name name of catagory
    * @return Category, if present
    */
   public Optional<Category> findCategory(String name) {
@@ -150,34 +158,58 @@ public class Controller {
   /**
    * Get the category object for this directory
    *
-   * @param path directory
+   * @param categoryID id of category
    * @return Category object, if .cat file exists
    */
-  private Optional<Category> getCategory(Path path) {
-    DirectoryStream.Filter<Path> catFilter = new DirectoryStream.Filter<Path>() {
-      @Override
-      public boolean accept(Path path) throws IOException {
-        return path.toString().toLowerCase().endsWith("cat");
+  private Optional<Category> getCategory(int categoryID) {
+
+    Statement stmt1;
+    ResultSet rs1;
+
+    Statement stmt2;
+    ResultSet rs2;
+
+    String categoryTable = "SELECT * FROM CATEGORY WHERE id = " + categoryID;
+    String productTables = "SELECT * FROM PRODUCT WHERE category_id = " + categoryID;
+
+    Category category = new Category();
+
+    try (Connection con = DriverManager.getConnection(url, username, password)) {
+
+      Set<Product> products = new HashSet<>();
+
+      stmt1 = con.createStatement();
+      rs1 = stmt1.executeQuery(categoryTable);
+
+      stmt2= con.createStatement();
+      rs2 = stmt2.executeQuery(productTables);
+
+      while(rs1.next()){
+        category.setName(rs1.getString("name"));
+        category.setDescription(rs1.getString("description"));
       }
-    };
 
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(path, catFilter)) {
-      for (Path file : stream) {
-        // read the file
-        BufferedReader reader = Files.newBufferedReader(file, Charset.forName("US-ASCII"));
-        Category category = new Category();
-
-        category.setName(reader.readLine());
-        category.setDescription(reader.readLine());
-        category.setProducts(loadProducts(path));
-
-        return Optional.of(category);
+      while(rs2.next()){
+        products.add(
+                loadProduct(
+                        rs2.getInt("sku"),
+                        rs2.getInt("item_count"),
+                        rs2.getInt("threshold"),
+                        rs2.getInt("recorder_amount"),
+                        rs2.getString("title"),
+                        rs2.getString("description"),
+                        BigDecimal.valueOf(rs2.getFloat("cost"))
+                )
+        );
       }
-    } catch (IOException | DirectoryIteratorException e) {
-      System.err.println(e);
+
+      category.setProducts(products);
+
+    } catch (SQLException e) {
+      throw new IllegalStateException("Cannot connect the database!", e);
     }
 
-    return Optional.empty();
+    return Optional.of(category);
   }
 
   private Optional<Product> getProduct(String category, String product) {
@@ -187,45 +219,30 @@ public class Controller {
   /**
    * Parse a subdirectory and create a product object for each product within it
    *
-   * @param path the subdirectory we're working in
+   * @param sku, item_count, threshold, recorder_amount, title, description, cost
    * @return a set of products
    */
-  private Set<Product> loadProducts(Path path) {
-    DirectoryStream.Filter<Path> productFilter = new DirectoryStream.Filter<Path>() {
-      @Override
-      public boolean accept(Path path) throws IOException {
-        return !Files.isDirectory(path) && !path.toString().toLowerCase().endsWith("cat");
-      }
-    };
+  private Product loadProduct(
+          int sku,
+          int item_count,
+          int threshold,
+          int recorder_amount,
+          String title,
+          String description,
+          BigDecimal cost
+  ) {
 
-    Set<Product> products = new HashSet<>();
+    Product product = new Product();
 
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(path, productFilter)) {
-      for (Path productFile : stream) {
-        // Read the product file
-        try (BufferedReader reader = Files.newBufferedReader(productFile, Charset.forName("US-ASCII"))){
-          Product product = new Product();
-          product.setSkuCode(Integer.valueOf(reader.readLine()));
-          product.setItemCount(Integer.valueOf(reader.readLine()));
-          product.setThreshold(Integer.valueOf(reader.readLine()));
-          product.setReorderAmount(Integer.valueOf(reader.readLine()));
-          product.setTitle(reader.readLine());
-          product.setDescription(reader.readLine());
-          product.setCost(new BigDecimal(reader.readLine()));
+    product.setSkuCode(sku);
+    product.setItemCount(item_count);
+    product.setThreshold(threshold);
+    product.setReorderAmount(recorder_amount);
+    product.setTitle(title);
+    product.setDescription(description);
+    product.setCost(cost);
 
-          product.setPath(productFile);
-
-          products.add(product);
-        } catch (Exception e) {
-          // Failed to read a product.  Log the error and continue
-          System.err.println("Failed to read file: " + path.toString());
-        }
-      }
-    } catch (IOException | DirectoryIteratorException e) {
-      System.err.println(e);
-    }
-
-    return products;
+    return product;
   }
 
   /**

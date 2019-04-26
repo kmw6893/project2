@@ -53,4 +53,76 @@ public class Product {
 
     return false;
   }
+
+  public boolean isUpdated() {
+    return updated;
+  }
+
+  public void setUpdated(boolean updated) {
+    this.updated = updated;
+  }
+
+  public Path getPath() {
+    return path;
+  }
+
+  public void setPath(Path path) {
+    this.path = path;
+  }
+
+  public int getSkuCode() {
+    return skuCode;
+  }
+
+  public void setSkuCode(int skuCode) {
+    this.skuCode = skuCode;
+  }
+
+  public int getItemCount() {
+    return itemCount;
+  }
+
+  public void setItemCount(int itemCount) {
+    this.itemCount = itemCount;
+  }
+
+  public int getThreshold() {
+    return threshold;
+  }
+
+  public void setThreshold(int threshold) {
+    this.threshold = threshold;
+  }
+
+  public int getReorderAmount() {
+    return reorderAmount;
+  }
+
+  public void setReorderAmount(int reorderAmount) {
+    this.reorderAmount = reorderAmount;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public BigDecimal getCost() {
+    return cost;
+  }
+
+  public void setCost(BigDecimal cost) {
+    this.cost = cost;
+  }
 }

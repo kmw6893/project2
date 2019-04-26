@@ -20,7 +20,7 @@ public class menumgr
 
     public menumgr()
     {
-        controller = new Controller(System.getProperty("fileSystemRoot"));
+        controller = new Controller( "catalog",  "localhost",  "3306",  "cust",  "1234");
 
     }
 
