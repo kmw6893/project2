@@ -55,8 +55,9 @@ public class menumgr
         menu m = new menu();
         List<String> categories = controller.getCategories();
         m.loadMenu(categories);
-        m.addMenuItem("'q' to Quit"); 
-        System.out.println("The following org.rit.swen440.presentation.categories are available");
+        m.addMenuItem("'q' to Quit");
+        m.addMenuItem("'s' to Search");
+        System.out.println("The following categories are available");
         m.printMenu();
         String result = "0";
         try
@@ -70,6 +71,13 @@ public class menumgr
         if (Objects.equals(result,"q"))
         {
             currentLevel--;
+        }
+        else if (Objects.equals(result, "s"))
+        {
+            Controller controller = new Controller( "catalog",  "localhost",  "3306",  "cust",  "1234");
+            System.out.println("Enter your search term: ");
+            String searchterm = m.getSelection();
+            controller.findItem(searchterm, m, this);
         }
         else
         {

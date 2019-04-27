@@ -1,5 +1,6 @@
 package org.rit.swen440;
 
+import org.rit.swen440.control.Controller;
 import org.rit.swen440.presentation.menumgr;
 
 import java.io.FileInputStream;

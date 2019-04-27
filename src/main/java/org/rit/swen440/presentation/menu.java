@@ -35,7 +35,7 @@ public class menu
 
     public String getSelection()
     {
-        String result = "x";
+        String result;
 
         sc.reset();
         result = sc.nextLine();

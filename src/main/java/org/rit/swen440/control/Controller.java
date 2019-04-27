@@ -2,18 +2,19 @@ package org.rit.swen440.control;
 
 import org.rit.swen440.dataLayer.Category;
 import org.rit.swen440.dataLayer.Product;
+import org.rit.swen440.presentation.menu;
+import org.rit.swen440.presentation.menumgr;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.sql.*;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +30,7 @@ public class Controller {
   private String username;
   private String password;
   private Set<Category> categories = new HashSet<>();
+  private int iSel;
 
   public  enum PRODUCT_FIELD {
     NAME,
@@ -140,6 +142,68 @@ public class Controller {
         .findFirst();
   }
 
+  public void findItem(String query, menu m, menumgr mgr) {
+    String search = "SELECT * FROM PRODUCT WHERE TITLE LIKE '%" + query +"%'";
+    Statement stmt;
+    ArrayList<Product> products = new ArrayList<>();
+    try (Connection con = DriverManager.getConnection(url, username, password)) {
+      stmt = con.createStatement();
+      ResultSet rs = stmt.executeQuery(search);
+      while(rs.next()){
+        products.add(
+                loadProduct(
+                        rs.getInt("sku"),
+                        rs.getInt("item_count"),
+                        rs.getInt("threshold"),
+                        rs.getInt("recorder_amount"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        BigDecimal.valueOf(rs.getFloat("cost"))
+                )
+        );
+      }
+      Iterator<Product> i = products.iterator();
+      int n;
+      for(n = 0; i.hasNext(); n++){
+        Product x = i.next();
+        System.out.println(n + ": " + x.getTitle() + "($" + x.getCost().setScale(2, RoundingMode.CEILING) + ")");
+      }
+      System.out.println(n + ": 'q' to Quit");
+      String result = m.getSelection();
+
+      String currentItemName = null;
+      try
+      {
+        iSel = Integer.parseInt(result);//Item  selected
+        currentItemName = products.get(iSel).getTitle();
+        //currentItem = itemList.get(iSel);
+        //Now read the file and print the org.rit.swen440.presentation.items in the catalog
+        System.out.println("You want item from the catalog: " + currentItemName);
+      }
+      catch (Exception e)
+      {
+        result = "q";
+      }
+      if (result == "q")
+        return;
+      else
+      {
+        //currentLevel++;//Or keep at same level?
+        rs = stmt.executeQuery(search);
+        ArrayList<Integer> categoryIDs = new ArrayList<>();
+        while(rs.next()){
+          categoryIDs.add(
+                  rs.getInt("category_id")
+          );
+        }
+        mgr.OrderQty(getCategory(categoryIDs.get(iSel)).get().getName(), currentItemName);
+      }
+
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
   /**
    * Loop through all our categories and write any product records that
    * have been updated.
