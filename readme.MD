@@ -51,6 +51,7 @@ and a better final grade.
  - Lombok Library: Lombok annotations are used in places to auto-generate getters and
  setters.  
  - JUnit Library:  Included but never used.
+ -Mysql: Database used to store information
 
 ### Building
 The development team choose Maven as their build tool.  Maven 3.1.0 and 3.3.9
