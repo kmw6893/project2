@@ -13,8 +13,13 @@ public class menu
         sc = new Scanner(System.in);
     }
 
-    public void loadMenu(List<String> menuItems)
+    public void loadMenu(List<String> menuItems, Boolean search)
     {
+        List<String> items = new ArrayList<>();
+        items.addAll(menuItems);
+        menuItems.clear();
+        if (search) menuItems.add("Search");
+        menuItems.addAll(items);
         menuList = menuItems;
     }
 

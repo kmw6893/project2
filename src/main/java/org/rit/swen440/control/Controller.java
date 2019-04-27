@@ -86,6 +86,21 @@ public class Controller {
   }
 
   /**
+   * Get a category name from a product
+   *
+   * @return a category name
+   */
+  public String getCategory(String productName) {
+    for (Category category : categories) {
+      for (Product product : category.getProducts()) {
+        if (product.getTitle().equals(productName)) return category.getName();
+      }
+    }
+    return null;
+  }
+
+
+  /**
    * Get the description of the named category
    * @param category name
    * @return description
@@ -142,16 +157,15 @@ public class Controller {
         .findFirst();
   }
 
-  public void findItem(String query, menu m, menumgr mgr) {
+  public List<String> findItem(String query) {
     String search = "SELECT * FROM PRODUCT WHERE TITLE LIKE '%" + query +"%'";
     Statement stmt;
-    ArrayList<Product> products = new ArrayList<>();
+    ArrayList<String> products = new ArrayList<>();
     try (Connection con = DriverManager.getConnection(url, username, password)) {
       stmt = con.createStatement();
       ResultSet rs = stmt.executeQuery(search);
       while(rs.next()){
-        products.add(
-                loadProduct(
+        Product product = loadProduct(
                         rs.getInt("sku"),
                         rs.getInt("item_count"),
                         rs.getInt("threshold"),
@@ -159,50 +173,13 @@ public class Controller {
                         rs.getString("title"),
                         rs.getString("description"),
                         BigDecimal.valueOf(rs.getFloat("cost"))
-                )
         );
+        products.add(product.getTitle());
       }
-      Iterator<Product> i = products.iterator();
-      int n;
-      for(n = 0; i.hasNext(); n++){
-        Product x = i.next();
-        System.out.println(n + ": " + x.getTitle() + "($" + x.getCost().setScale(2, RoundingMode.CEILING) + ")");
-      }
-      System.out.println(n + ": 'q' to Quit");
-      String result = m.getSelection();
-
-      String currentItemName = null;
-      try
-      {
-        iSel = Integer.parseInt(result);//Item  selected
-        currentItemName = products.get(iSel).getTitle();
-        //currentItem = itemList.get(iSel);
-        //Now read the file and print the org.rit.swen440.presentation.items in the catalog
-        System.out.println("You want item from the catalog: " + currentItemName);
-      }
-      catch (Exception e)
-      {
-        result = "q";
-      }
-      if (result == "q")
-        return;
-      else
-      {
-        //currentLevel++;//Or keep at same level?
-        rs = stmt.executeQuery(search);
-        ArrayList<Integer> categoryIDs = new ArrayList<>();
-        while(rs.next()){
-          categoryIDs.add(
-                  rs.getInt("category_id")
-          );
-        }
-        mgr.OrderQty(getCategory(categoryIDs.get(iSel)).get().getName(), currentItemName);
-      }
-
-
     } catch (SQLException e) {
       e.printStackTrace();
     }
+    return products;
   }
   /**
    * Loop through all our categories and write any product records that
