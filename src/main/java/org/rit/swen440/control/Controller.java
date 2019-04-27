@@ -157,6 +157,11 @@ public class Controller {
         .findFirst();
   }
 
+  /**
+   * Get all products that match a passed in search term
+   * @param query the search term
+   * @return A list of product names
+   */
   public List<String> findItem(String query) {
     String search = "SELECT * FROM PRODUCT WHERE TITLE LIKE '%" + query +"%'";
     Statement stmt;

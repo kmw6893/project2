@@ -20,10 +20,10 @@ public class menutest
                 done = mgr.loadLevel(currentLevel);
             } while (!done);
 
-            System.out.println("Thank you for shopping at Hippolyta.com!");
+            System.out.println("\nThank you for shopping at Hippolyta.com!");
 
         } catch(IOException e) {
-            System.err.println("orderSys.properties not found.");
+            System.err.println("\norderSys.properties not found.");
         }
 
     }
